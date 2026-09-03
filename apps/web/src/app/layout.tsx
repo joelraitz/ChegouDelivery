@@ -1,4 +1,5 @@
 import React from 'react';
+import './globals.css';
 
 export const metadata = {
   title: 'ChegouDelivery | Entregas Rápidas',
@@ -12,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', backgroundColor: '#f4f4f5' }}>
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900">
         {children}
       </body>
     </html>
