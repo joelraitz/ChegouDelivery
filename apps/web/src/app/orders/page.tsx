@@ -9,9 +9,7 @@ import {
   MapPin, 
   RefreshCw, 
   Loader2, 
-  Package, 
-  ShoppingBag, 
-  ShoppingCart 
+  Package
 } from 'lucide-react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 
@@ -38,7 +36,17 @@ export default function ClientOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:3333/orders', { cache: 'no-store' });
+      const token = localStorage.getItem('@chegoudelivery:token');
+
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('http://localhost:3333/orders', {
+        headers,
+        cache: 'no-store',
+      });
       const data = await res.json();
       setOrders(data.orders || []);
     } catch (err) {
@@ -50,7 +58,7 @@ export default function ClientOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000); // Polling automático a cada 5s
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -134,7 +142,6 @@ export default function ClientOrdersPage() {
                     {/* Linha do Tempo (Timeline Status) */}
                     <div className="mt-6 pt-2">
                       <div className="relative flex items-center justify-between">
-                        {/* Linha de Progresso Backend */}
                         <div className="absolute left-0 top-1/2 -z-0 h-1 w-full -translate-y-1/2 bg-slate-100" />
                         <div
                           className="absolute left-0 top-1/2 -z-0 h-1 -translate-y-1/2 bg-emerald-500 transition-all duration-500"
@@ -143,7 +150,6 @@ export default function ClientOrdersPage() {
                           }}
                         />
 
-                        {/* Etapas */}
                         {STEPS.map((step, idx) => {
                           const Icon = step.icon;
                           const isCompleted = idx <= currentStep;
