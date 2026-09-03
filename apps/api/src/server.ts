@@ -1,16 +1,19 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { orderRoutes } from './routes/orders';
 import { driverRoutes } from './routes/drivers';
 import { paymentRoutes } from './routes/payments';
 
 const app = Fastify({ logger: true });
 
-// Registro das rotas
+app.register(cors, {
+  origin: '*',
+});
+
 app.register(orderRoutes);
 app.register(driverRoutes);
 app.register(paymentRoutes);
 
-// Checagem de saúde
 app.get('/health', async () => {
   return { status: 'ok', service: 'ChegouDelivery API' };
 });
