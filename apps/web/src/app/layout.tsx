@@ -1,9 +1,10 @@
-import React from 'react';
+import type { Metadata } from 'next';
 import './globals.css';
+import { Navbar } from '../components/Navbar';
 
-export const metadata = {
-  title: 'ChegouDelivery | Entregas Rápidas',
-  description: 'Peça lanches, ranchos e entregas expressas.',
+export const metadata: Metadata = {
+  title: 'ChegouDelivery - Entregas Rápidas',
+  description: 'Plataforma completa de delivery para clientes, restaurantes e entregadores.',
 };
 
 export default function RootLayout({
@@ -13,7 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <body className="bg-slate-50/50 antialiased">
+        <Navbar />
         {children}
       </body>
     </html>
