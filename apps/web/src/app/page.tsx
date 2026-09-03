@@ -1,4 +1,5 @@
 import React from 'react';
+import OrderForm from './components/OrderForm';
 
 interface Order {
   id: string;
@@ -8,11 +9,10 @@ interface Order {
   deliveryAddress: string;
 }
 
-// Função de busca de dados na API
 async function getOrders(): Promise<Order[]> {
   try {
     const res = await fetch('http://localhost:3333/orders', {
-      cache: 'no-store', // Garante dados sempre atualizados
+      cache: 'no-store',
     });
 
     if (!res.ok) {
@@ -45,8 +45,11 @@ export default async function Home() {
     <main style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2rem', textAlign: 'center' }}>
         <h1 style={{ color: '#16a34a' }}>🚚 ChegouDelivery</h1>
-        <p>Painel de Acompanhamento de Pedidos em Tempo Real</p>
+        <p>Painel de Acompanhamento e Cadastro de Pedidos em Tempo Real</p>
       </header>
+
+      {/* Formulário de Novo Pedido */}
+      <OrderForm />
 
       <section>
         <h2 style={{ marginBottom: '1rem' }}>📦 Pedidos Recentes</h2>
