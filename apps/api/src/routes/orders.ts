@@ -1,51 +1,43 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { prisma } from '../lib/prisma';
 
 export async function orderRoutes(app: FastifyInstance) {
-  // Criar um novo pedido (Lanche, Rancho ou Encomenda)
+  // Criar pedido no Banco de Dados
   app.post('/orders', async (request, reply) => {
     const createOrderSchema = z.object({
       userId: z.string(),
       type: z.enum(['SNACK', 'GROCERY', 'PARCEL']),
       totalAmount: z.number().positive(),
       deliveryAddress: z.string(),
-      paymentMethod: z.enum(['PIX', 'CREDIT_CARD', 'DEBIT_CARD'])
     });
 
     const body = createOrderSchema.parse(request.body);
 
-    const newOrder = {
-      id: `ord_${Date.now()}`,
-      ...body,
-      status: 'PENDING',
-      createdAt: new Date().toISOString()
-    };
-
-    return reply.status(201).send({
-      message: 'Pedido criado com sucesso!',
-      order: newOrder
+    const order = await prisma.order.create({
+      data: {
+        userId: body.userId,
+        type: body.type,
+        totalAmount: body.totalAmount,
+        deliveryAddress: body.deliveryAddress,
+      },
     });
+
+    return reply.status(201).send({ message: 'Pedido criado!', order });
   });
 
-  // Listar pedidos ativos
+  // Listar pedidos do Banco de Dados
   app.get('/orders', async () => {
-    return {
-      orders: [
-        {
-          id: 'ord_1001',
-          type: 'SNACK',
-          totalAmount: 45.0,
-          status: 'PREPARING',
-          deliveryAddress: 'Rua das Flores, 123'
-        },
-        {
-          id: 'ord_1002',
-          type: 'GROCERY',
-          totalAmount: 180.5,
-          status: 'DELIVERING',
-          deliveryAddress: 'Av. Brasil, 456'
-        }
-      ]
-    };
+    const orders = await prisma.order.findMany({
+      include: {
+        user: true,
+        driver: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return { orders };
   });
 }
