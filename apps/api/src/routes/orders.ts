@@ -1,4 +1,6 @@
 import { FastifyInstance } from 'fastify';
+import fastifyWebsocket from '@fastify/websocket';
+import { WebSocket } from 'ws';
 
 interface CreateOrderBody {
   type: 'SNACK' | 'GROCERY' | 'PARCEL';
@@ -24,21 +26,40 @@ export interface Order {
   createdAt: string;
 }
 
-// Armazenamento em memória para demonstração
 const orders: Order[] = [];
+const connectedClients = new Set<WebSocket>();
+
+// Envia uma mensagem para todos os clientes conectados
+function broadcastOrderUpdate(event: string, data: any) {
+  const payload = JSON.stringify({ event, data });
+  connectedClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
 
 export async function ordersRoutes(fastify: FastifyInstance) {
-  // Criar Pedido (Aguardando Pagamento) vinculado ao usuário
+  await fastify.register(fastifyWebsocket);
+
+  // Endpoint WebSocket para clientes, restaurantes e entregadores
+  fastify.get('/ws/orders', { websocket: true }, (connection) => {
+    const socket = connection.socket;
+    connectedClients.add(socket);
+
+    socket.on('close', () => {
+      connectedClients.delete(socket);
+    });
+  });
+
+  // Criar Pedido
   fastify.post('/orders', async (request, reply) => {
     let userId = 'user_guest';
 
     try {
-      // Tenta decodificar o token JWT se presente no header Authorization
       const decoded = await request.jwtVerify<{ sub: string }>();
       userId = decoded.sub;
-    } catch (err) {
-      // Caso não haja token ou seja inválido, prossegue como visitante/demo
-    }
+    } catch (err) {}
 
     const { type, deliveryAddress, totalAmount } = request.body as CreateOrderBody;
 
@@ -59,10 +80,13 @@ export async function ordersRoutes(fastify: FastifyInstance) {
 
     orders.push(newOrder);
 
+    // Emite o evento em tempo real
+    broadcastOrderUpdate('ORDER_CREATED', newOrder);
+
     return reply.status(201).send({ order: newOrder });
   });
 
-  // Simular Processamento de Pagamento
+  // Confirmar Pagamento
   fastify.post('/orders/:id/pay', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { paymentMethod } = request.body as { paymentMethod: 'PIX' | 'CREDIT_CARD' };
@@ -76,31 +100,29 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     order.paymentStatus = 'PAID';
     order.paymentMethod = paymentMethod;
 
+    // Emite o evento de pagamento em tempo real
+    broadcastOrderUpdate('ORDER_PAID', order);
+
     return reply.send({ message: 'Pagamento confirmado com sucesso!', order });
   });
 
-  // Listar Pedidos (Filtrado por usuário se autenticado)
-  fastify.get('/orders', async (request, reply) => {
+  // Listar Pedidos
+  fastify.get('/orders', async (request) => {
     let userId: string | null = null;
 
     try {
       const decoded = await request.jwtVerify<{ sub: string }>();
       userId = decoded.sub;
-    } catch (err) {
-      // Sem token válido
-    }
+    } catch (err) {}
 
-    // Se o usuário estiver autenticado, retorna apenas os seus pedidos.
-    // Caso contrário (ex: painéis de restaurante/entregador sem JWT direto ou em dev), retorna todos.
     if (userId) {
-      const userOrders = orders.filter((o) => o.userId === userId);
-      return { orders: userOrders };
+      return { orders: orders.filter((o) => o.userId === userId) };
     }
 
     return { orders };
   });
 
-  // Atualizar Status do Pedido (Restaurante/Entregador)
+  // Atualizar Status do Pedido
   fastify.patch('/orders/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { status, driverId } = request.body as UpdateStatusBody;
@@ -117,6 +139,9 @@ export async function ordersRoutes(fastify: FastifyInstance) {
 
     order.status = status;
     if (driverId) order.driverId = driverId;
+
+    // Emite o evento de atualização de status para todas as telas abertas
+    broadcastOrderUpdate('ORDER_STATUS_UPDATED', order);
 
     return reply.send({ order });
   });
