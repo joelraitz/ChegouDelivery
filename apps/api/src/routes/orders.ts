@@ -29,7 +29,7 @@ export interface Order {
 const orders: Order[] = [];
 const connectedClients = new Set<WebSocket>();
 
-// Envia uma mensagem para todos os clientes conectados
+// Transmite a mensagem para todas as conexões ativas
 function broadcastOrderUpdate(event: string, data: any) {
   const payload = JSON.stringify({ event, data });
   connectedClients.forEach((client) => {
@@ -42,7 +42,7 @@ function broadcastOrderUpdate(event: string, data: any) {
 export async function ordersRoutes(fastify: FastifyInstance) {
   await fastify.register(fastifyWebsocket);
 
-  // Endpoint WebSocket para clientes, restaurantes e entregadores
+  // Rota de escuta WebSocket
   fastify.get('/ws/orders', { websocket: true }, (connection) => {
     const socket = connection.socket;
     connectedClients.add(socket);
@@ -79,8 +79,6 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     };
 
     orders.push(newOrder);
-
-    // Emite o evento em tempo real
     broadcastOrderUpdate('ORDER_CREATED', newOrder);
 
     return reply.status(201).send({ order: newOrder });
@@ -100,7 +98,6 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     order.paymentStatus = 'PAID';
     order.paymentMethod = paymentMethod;
 
-    // Emite o evento de pagamento em tempo real
     broadcastOrderUpdate('ORDER_PAID', order);
 
     return reply.send({ message: 'Pagamento confirmado com sucesso!', order });
@@ -140,7 +137,6 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     order.status = status;
     if (driverId) order.driverId = driverId;
 
-    // Emite o evento de atualização de status para todas as telas abertas
     broadcastOrderUpdate('ORDER_STATUS_UPDATED', order);
 
     return reply.send({ order });
