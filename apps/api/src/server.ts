@@ -1,15 +1,20 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
 import { orderRoutes } from './routes/orders';
 import { driverRoutes } from './routes/drivers';
 import { paymentRoutes } from './routes/payments';
+import { authRoutes } from './routes/auth';
 
 const app = Fastify({ logger: true });
 
-app.register(cors, {
-  origin: '*',
+app.register(cors, { origin: '*' });
+
+app.register(jwt, {
+  secret: process.env.JWT_SECRET || 'chegoudelivery-secret-key-super-safe',
 });
 
+app.register(authRoutes);
 app.register(orderRoutes);
 app.register(driverRoutes);
 app.register(paymentRoutes);
