@@ -1,68 +1,96 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { prisma } from '../lib/prisma';
 
-export async function orderRoutes(app: FastifyInstance) {
-  // Criar pedido
-  app.post('/orders', async (request, reply) => {
-    const createOrderSchema = z.object({
-      userId: z.string(),
-      type: z.enum(['SNACK', 'GROCERY', 'PARCEL']),
-      totalAmount: z.number().positive(),
-      deliveryAddress: z.string(),
-    });
+interface CreateOrderBody {
+  type: 'SNACK' | 'GROCERY' | 'PARCEL';
+  deliveryAddress: string;
+  totalAmount: number;
+}
 
-    const body = createOrderSchema.parse(request.body);
+interface UpdateStatusBody {
+  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
+  driverId?: string;
+}
 
-    const order = await prisma.order.create({
-      data: {
-        userId: body.userId,
-        type: body.type,
-        totalAmount: body.totalAmount,
-        deliveryAddress: body.deliveryAddress,
-      },
-    });
+export interface Order {
+  id: string;
+  type: 'SNACK' | 'GROCERY' | 'PARCEL';
+  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
+  paymentMethod?: 'PIX' | 'CREDIT_CARD';
+  deliveryAddress: string;
+  totalAmount: number;
+  driverId?: string;
+  createdAt: string;
+}
 
-    return reply.status(201).send({ message: 'Pedido criado!', order });
+// Armazenamento em memória para demonstração
+const orders: Order[] = [];
+
+export async function ordersRoutes(fastify: FastifyInstance) {
+  // Criar Pedido (Aguardando Pagamento)
+  fastify.post('/orders', async (request, reply) => {
+    const { type, deliveryAddress, totalAmount } = request.body as CreateOrderBody;
+
+    if (!type || !deliveryAddress || !totalAmount) {
+      return reply.status(400).send({ error: 'Dados incompletos para criação do pedido.' });
+    }
+
+    const newOrder: Order = {
+      id: Math.random().toString(36).substr(2, 9),
+      type,
+      status: 'PENDING',
+      paymentStatus: 'PENDING',
+      deliveryAddress,
+      totalAmount,
+      createdAt: new Date().toISOString(),
+    };
+
+    orders.push(newOrder);
+
+    return reply.status(201).send({ order: newOrder });
   });
 
-  // Listar pedidos
-  app.get('/orders', async () => {
-    const orders = await prisma.order.findMany({
-      include: {
-        user: true,
-        driver: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+  // Simular Processamento de Pagamento
+  fastify.post('/orders/:id/pay', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { paymentMethod } = request.body as { paymentMethod: 'PIX' | 'CREDIT_CARD' };
 
+    const order = orders.find((o) => o.id === id);
+
+    if (!order) {
+      return reply.status(404).send({ error: 'Pedido não encontrado.' });
+    }
+
+    order.paymentStatus = 'PAID';
+    order.paymentMethod = paymentMethod;
+
+    return reply.send({ message: 'Pagamento confirmado com sucesso!', order });
+  });
+
+  // Listar Pedidos
+  fastify.get('/orders', async () => {
     return { orders };
   });
 
-  // Atualizar Status do Pedido / Aceitar Entrega
-  app.patch('/orders/:id/status', async (request, reply) => {
-    const paramsSchema = z.object({
-      id: z.string(),
-    });
+  // Atualizar Status do Pedido (Restaurante/Entregador)
+  fastify.patch('/orders/:id/status', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { status, driverId } = request.body as UpdateStatusBody;
 
-    const bodySchema = z.object({
-      status: z.enum(['PENDING', 'PREPARING', 'DELIVERING', 'DELIVERED', 'CANCELLED']),
-      driverId: z.string().optional(),
-    });
+    const order = orders.find((o) => o.id === id);
 
-    const { id } = paramsSchema.parse(request.params);
-    const { status, driverId } = bodySchema.parse(request.body);
+    if (!order) {
+      return reply.status(404).send({ error: 'Pedido não encontrado.' });
+    }
 
-    const order = await prisma.order.update({
-      where: { id },
-      data: {
-        status,
-        ...(driverId && { driverId }),
-      },
-    });
+    // Regra: Restaurante só aceita pedido se estiver PAGO
+    if (status === 'PREPARING' && order.paymentStatus !== 'PAID') {
+      return reply.status(400).send({ error: 'Pedido aguardando confirmação de pagamento.' });
+    }
 
-    return reply.send({ message: 'Status atualizado com sucesso!', order });
+    order.status = status;
+    if (driverId) order.driverId = driverId;
+
+    return reply.send({ order });
   });
 }
