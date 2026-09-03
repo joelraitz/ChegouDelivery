@@ -13,6 +13,7 @@ interface UpdateStatusBody {
 
 export interface Order {
   id: string;
+  userId: string;
   type: 'SNACK' | 'GROCERY' | 'PARCEL';
   status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
@@ -27,8 +28,18 @@ export interface Order {
 const orders: Order[] = [];
 
 export async function ordersRoutes(fastify: FastifyInstance) {
-  // Criar Pedido (Aguardando Pagamento)
+  // Criar Pedido (Aguardando Pagamento) vinculado ao usuário
   fastify.post('/orders', async (request, reply) => {
+    let userId = 'user_guest';
+
+    try {
+      // Tenta decodificar o token JWT se presente no header Authorization
+      const decoded = await request.jwtVerify<{ sub: string }>();
+      userId = decoded.sub;
+    } catch (err) {
+      // Caso não haja token ou seja inválido, prossegue como visitante/demo
+    }
+
     const { type, deliveryAddress, totalAmount } = request.body as CreateOrderBody;
 
     if (!type || !deliveryAddress || !totalAmount) {
@@ -37,6 +48,7 @@ export async function ordersRoutes(fastify: FastifyInstance) {
 
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9),
+      userId,
       type,
       status: 'PENDING',
       paymentStatus: 'PENDING',
@@ -67,8 +79,24 @@ export async function ordersRoutes(fastify: FastifyInstance) {
     return reply.send({ message: 'Pagamento confirmado com sucesso!', order });
   });
 
-  // Listar Pedidos
-  fastify.get('/orders', async () => {
+  // Listar Pedidos (Filtrado por usuário se autenticado)
+  fastify.get('/orders', async (request, reply) => {
+    let userId: string | null = null;
+
+    try {
+      const decoded = await request.jwtVerify<{ sub: string }>();
+      userId = decoded.sub;
+    } catch (err) {
+      // Sem token válido
+    }
+
+    // Se o usuário estiver autenticado, retorna apenas os seus pedidos.
+    // Caso contrário (ex: painéis de restaurante/entregador sem JWT direto ou em dev), retorna todos.
+    if (userId) {
+      const userOrders = orders.filter((o) => o.userId === userId);
+      return { orders: userOrders };
+    }
+
     return { orders };
   });
 
@@ -83,7 +111,6 @@ export async function ordersRoutes(fastify: FastifyInstance) {
       return reply.status(404).send({ error: 'Pedido não encontrado.' });
     }
 
-    // Regra: Restaurante só aceita pedido se estiver PAGO
     if (status === 'PREPARING' && order.paymentStatus !== 'PAID') {
       return reply.status(400).send({ error: 'Pedido aguardando confirmação de pagamento.' });
     }
