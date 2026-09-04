@@ -1,70 +1,69 @@
-import { FastifyInstance } from 'fastify';
-import fastifyWebsocket from '@fastify/websocket';
-import { WebSocket } from 'ws';
+import { FastifyInstance } from 'fastify'
+import fastifyWebsocket from '@fastify/websocket'
+import { WebSocket } from 'ws'
 
 interface CreateOrderBody {
-  type: 'SNACK' | 'GROCERY' | 'PARCEL';
-  deliveryAddress: string;
-  totalAmount: number;
+  type: 'SNACK' | 'GROCERY' | 'PARCEL'
+  deliveryAddress: string
+  totalAmount: number
 }
 
 interface UpdateStatusBody {
-  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
-  driverId?: string;
+  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED'
+  driverId?: string
 }
 
 export interface Order {
-  id: string;
-  userId: string;
-  type: 'SNACK' | 'GROCERY' | 'PARCEL';
-  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
-  paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
-  paymentMethod?: 'PIX' | 'CREDIT_CARD';
-  deliveryAddress: string;
-  totalAmount: number;
-  driverId?: string;
-  createdAt: string;
+  id: string
+  userId: string
+  type: 'SNACK' | 'GROCERY' | 'PARCEL'
+  status: 'PENDING' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED'
+  paymentStatus: 'PENDING' | 'PAID' | 'FAILED'
+  paymentMethod?: 'PIX' | 'CREDIT_CARD'
+  deliveryAddress: string
+  totalAmount: number
+  driverId?: string
+  createdAt: string
 }
 
-const orders: Order[] = [];
-const connectedClients = new Set<WebSocket>();
+const orders: Order[] = []
+const connectedClients = new Set<WebSocket>()
 
-// Transmite a mensagem para todas as conexões ativas
 function broadcastOrderUpdate(event: string, data: any) {
-  const payload = JSON.stringify({ event, data });
+  const payload = JSON.stringify({ event, data })
   connectedClients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
+      client.send(payload)
     }
-  });
+  })
 }
 
 export async function ordersRoutes(fastify: FastifyInstance) {
-  await fastify.register(fastifyWebsocket);
+  await fastify.register(fastifyWebsocket)
 
-  // Rota de escuta WebSocket
+  // Rota WebSocket corrigida: connection já é o socket
   fastify.get('/ws/orders', { websocket: true }, (connection) => {
-    const socket = connection.socket;
-    connectedClients.add(socket);
+    const socket = connection.socket || connection
+    connectedClients.add(socket)
 
     socket.on('close', () => {
-      connectedClients.delete(socket);
-    });
-  });
+      connectedClients.delete(socket)
+    })
+  })
 
   // Criar Pedido
   fastify.post('/orders', async (request, reply) => {
-    let userId = 'user_guest';
+    let userId = 'user_guest'
 
     try {
-      const decoded = await request.jwtVerify<{ sub: string }>();
-      userId = decoded.sub;
+      const decoded = await request.jwtVerify<{ sub: string }>()
+      userId = decoded.sub
     } catch (err) {}
 
-    const { type, deliveryAddress, totalAmount } = request.body as CreateOrderBody;
+    const { type, deliveryAddress, totalAmount } = request.body as CreateOrderBody
 
     if (!type || !deliveryAddress || !totalAmount) {
-      return reply.status(400).send({ error: 'Dados incompletos para criação do pedido.' });
+      return reply.status(400).send({ error: 'Dados incompletos para criação do pedido.' })
     }
 
     const newOrder: Order = {
@@ -76,69 +75,69 @@ export async function ordersRoutes(fastify: FastifyInstance) {
       deliveryAddress,
       totalAmount,
       createdAt: new Date().toISOString(),
-    };
+    }
 
-    orders.push(newOrder);
-    broadcastOrderUpdate('ORDER_CREATED', newOrder);
+    orders.push(newOrder)
+    broadcastOrderUpdate('ORDER_CREATED', newOrder)
 
-    return reply.status(201).send({ order: newOrder });
-  });
+    return reply.status(201).send({ order: newOrder })
+  })
 
   // Confirmar Pagamento
   fastify.post('/orders/:id/pay', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const { paymentMethod } = request.body as { paymentMethod: 'PIX' | 'CREDIT_CARD' };
+    const { id } = request.params as { id: string }
+    const { paymentMethod } = request.body as { paymentMethod: 'PIX' | 'CREDIT_CARD' }
 
-    const order = orders.find((o) => o.id === id);
+    const order = orders.find((o) => o.id === id)
 
     if (!order) {
-      return reply.status(404).send({ error: 'Pedido não encontrado.' });
+      return reply.status(404).send({ error: 'Pedido não encontrado.' })
     }
 
-    order.paymentStatus = 'PAID';
-    order.paymentMethod = paymentMethod;
+    order.paymentStatus = 'PAID'
+    order.paymentMethod = paymentMethod
 
-    broadcastOrderUpdate('ORDER_PAID', order);
+    broadcastOrderUpdate('ORDER_PAID', order)
 
-    return reply.send({ message: 'Pagamento confirmado com sucesso!', order });
-  });
+    return reply.send({ message: 'Pagamento confirmado com sucesso!', order })
+  })
 
   // Listar Pedidos
   fastify.get('/orders', async (request) => {
-    let userId: string | null = null;
+    let userId: string | null = null
 
     try {
-      const decoded = await request.jwtVerify<{ sub: string }>();
-      userId = decoded.sub;
+      const decoded = await request.jwtVerify<{ sub: string }>()
+      userId = decoded.sub
     } catch (err) {}
 
     if (userId) {
-      return { orders: orders.filter((o) => o.userId === userId) };
+      return { orders: orders.filter((o) => o.userId === userId) }
     }
 
-    return { orders };
-  });
+    return { orders }
+  })
 
   // Atualizar Status do Pedido
   fastify.patch('/orders/:id/status', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const { status, driverId } = request.body as UpdateStatusBody;
+    const { id } = request.params as { id: string }
+    const { status, driverId } = request.body as UpdateStatusBody
 
-    const order = orders.find((o) => o.id === id);
+    const order = orders.find((o) => o.id === id)
 
     if (!order) {
-      return reply.status(404).send({ error: 'Pedido não encontrado.' });
+      return reply.status(404).send({ error: 'Pedido não encontrado.' })
     }
 
     if (status === 'PREPARING' && order.paymentStatus !== 'PAID') {
-      return reply.status(400).send({ error: 'Pedido aguardando confirmação de pagamento.' });
+      return reply.status(400).send({ error: 'Pedido aguardando confirmação de pagamento.' })
     }
 
-    order.status = status;
-    if (driverId) order.driverId = driverId;
+    order.status = status
+    if (driverId) order.driverId = driverId
 
-    broadcastOrderUpdate('ORDER_STATUS_UPDATED', order);
+    broadcastOrderUpdate('ORDER_STATUS_UPDATED', order)
 
-    return reply.send({ order });
-  });
+    return reply.send({ order })
+  })
 }
