@@ -1,36 +1,43 @@
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
-import { orderRoutes } from './routes/orders';
-import { driverRoutes } from './routes/drivers';
-import { paymentRoutes } from './routes/payments';
-import { authRoutes } from './routes/auth';
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import jwt from '@fastify/jwt'
 
-const app = Fastify({ logger: true });
+import { authRoutes } from './routes/auth'
+import { ordersRoutes } from './routes/orders'
+import { paymentsRoutes } from './routes/payments'
 
-app.register(cors, { origin: '*' });
+const app = Fastify({
+  logger: true,
+})
 
-app.register(jwt, {
-  secret: process.env.JWT_SECRET || 'chegoudelivery-secret-key-super-safe',
-});
+async function bootstrap() {
+  // Configuração do CORS
+  await app.register(cors, {
+    origin: true,
+  })
 
-app.register(authRoutes);
-app.register(orderRoutes);
-app.register(driverRoutes);
-app.register(paymentRoutes);
+  // Configuração do JWT
+  await app.register(jwt, {
+    secret: process.env.JWT_SECRET || 'supersecret',
+  })
 
-app.get('/health', async () => {
-  return { status: 'ok', service: 'ChegouDelivery API' };
-});
+  // Registrar as rotas da aplicação
+  await app.register(authRoutes)
+  await app.register(ordersRoutes)
+  await app.register(paymentsRoutes)
 
-const start = async () => {
+  const port = Number(process.env.PORT) || 3333
+
   try {
-    await app.listen({ port: 3333, host: '0.0.0.0' });
-    console.log('🚀 Servidor ChegouDelivery API rodando em http://localhost:3333');
+    await app.listen({
+      port,
+      host: '0.0.0.0',
+    })
+    console.log(`🚀 Servidor rodando na porta ${port}`)
   } catch (err) {
-    app.log.error(err);
-    process.exit(1);
+    app.log.error(err)
+    process.exit(1)
   }
-};
+}
 
-start();
+bootstrap()
