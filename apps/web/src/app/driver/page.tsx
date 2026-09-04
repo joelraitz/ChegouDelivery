@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Bike, Navigation, CheckCircle, Clock, MapPin, Loader2, RefreshCw } from 'lucide-react';
-import { ProtectedRoute } from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
 
 interface Order {
   id: string;
@@ -20,7 +22,7 @@ export default function DriverDashboard() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:3333/orders', { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/orders`, { cache: 'no-store' });
       const data = await res.json();
       setOrders(data.orders || []);
     } catch (err) {
@@ -37,7 +39,7 @@ export default function DriverDashboard() {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`http://localhost:3333/orders/${orderId}/status`, {
+      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -57,7 +59,7 @@ export default function DriverDashboard() {
   };
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['driver']}>
       <div className="min-h-screen bg-slate-50/50 pb-12">
         {/* Header do Entregador */}
         <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
