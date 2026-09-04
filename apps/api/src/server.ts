@@ -4,27 +4,24 @@ import jwt from '@fastify/jwt'
 
 import { authRoutes } from './routes/auth'
 import { ordersRoutes } from './routes/orders'
-import { paymentsRoutes } from './routes/payments'
+import { paymentRoutes } from './routes/payments'
 
 const app = Fastify({
   logger: true,
 })
 
 async function bootstrap() {
-  // Configuração do CORS
   await app.register(cors, {
     origin: true,
   })
 
-  // Configuração do JWT
   await app.register(jwt, {
     secret: process.env.JWT_SECRET || 'supersecret',
   })
 
-  // Registrar as rotas da aplicação
   await app.register(authRoutes)
   await app.register(ordersRoutes)
-  await app.register(paymentsRoutes)
+  await app.register(paymentRoutes)
 
   const port = Number(process.env.PORT) || 3333
 
