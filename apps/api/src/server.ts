@@ -19,6 +19,11 @@ async function bootstrap() {
     secret: process.env.JWT_SECRET || 'supersecret',
   })
 
+  // Rota raiz para confirmação de status da API
+  app.get('/', async () => {
+    return { status: 'online', message: 'API ChegouDelivery rodando com sucesso! 🚀' }
+  })
+
   await app.register(authRoutes)
   await app.register(ordersRoutes)
   await app.register(paymentRoutes)
