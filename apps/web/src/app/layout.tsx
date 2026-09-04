@@ -1,23 +1,28 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Navbar } from '../components/Navbar';
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import '@/app/globals.css'
+import { Navbar } from '@/components/Navbar'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ChegouDelivery - Entregas Rápidas',
-  description: 'Plataforma completa de delivery para clientes, restaurantes e entregadores.',
-};
+  title: 'ChegouDelivery',
+  description: 'Sua plataforma de entregas rápidas',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-slate-50/50 antialiased">
+      <body className={inter.className}>
         <Navbar />
-        {children}
+        <main className="min-h-screen bg-background">
+          {children}
+        </main>
       </body>
     </html>
-  );
+  )
 }
