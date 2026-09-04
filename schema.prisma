@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderType {
+  SNACK
+  GROCERY
+  PARCEL
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+model User {
+  id    String @id @default(uuid())
+  name  String
+  email String @unique
+  phone String @unique
+}
+
+model Order {
+  id            String        @id @default(uuid())
+  type          OrderType
+  totalAmount   Float
+  paymentMethod PaymentMethod
+  createdAt     DateTime      @default(now())
+}
