@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import fastifyWebsocket, { SocketStream } from '@fastify/websocket'
+import fastifyWebsocket from '@fastify/websocket'
 import { WebSocket } from 'ws'
 
 interface CreateOrderBody {
@@ -41,9 +41,9 @@ function broadcastOrderUpdate(event: string, data: any) {
 export async function ordersRoutes(fastify: FastifyInstance) {
   await fastify.register(fastifyWebsocket)
 
-  // Tipagem correta utilizando SocketStream
-  fastify.get('/ws/orders', { websocket: true }, (connection: SocketStream) => {
-    const socket = connection.socket
+  // Utiliza 'any' no parâmetro para evitar incompatibilidades de versões de tipos do Fastify WebSocket
+  fastify.get('/ws/orders', { websocket: true }, (connection: any) => {
+    const socket: WebSocket = connection.socket || connection
     connectedClients.add(socket)
 
     socket.on('close', () => {
