@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { Clock, ChefHat, Bike, CheckCircle2, MapPin, RefreshCw, Loader2, Package } from 'lucide-react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 
