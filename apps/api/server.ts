@@ -1,36 +1,54 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
-import { orderRoutes } from './routes/orders';
-import { driverRoutes } from './routes/drivers';
-import { paymentRoutes } from './routes/payments';
-import { authRoutes } from './routes/auth';
+import websocket from '@fastify/websocket';
 
-const app = Fastify({ logger: true });
-
-app.register(cors, { origin: '*' });
-
-app.register(jwt, {
-  secret: process.env.JWT_SECRET || 'chegoudelivery-secret-key-super-safe',
+const app = Fastify({
+  logger: true,
 });
 
-app.register(authRoutes);
-app.register(orderRoutes);
-app.register(driverRoutes);
-app.register(paymentRoutes);
+async function main() {
+  // Habilita o CORS para permitir requisições da Vercel
+  await app.register(cors, {
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
-app.get('/health', async () => {
-  return { status: 'ok', service: 'ChegouDelivery API' };
-});
+  // Habilita suporte a WebSockets
+  await app.register(websocket);
 
-const start = async () => {
+  // Rota de teste
+  app.get('/', async () => {
+    return {
+      status: 'online',
+      message: 'API ChegouDelivery rodando com sucesso! 🚀',
+    };
+  });
+
+  // Exemplo de rota para cadastro
+  app.post('/users', async (request, reply) => {
+    const body = request.body;
+    return reply.status(201).send({ message: 'Usuário cadastrado com sucesso', data: body });
+  });
+
+  // Rota WebSocket
+  app.get('/ws', { websocket: true }, (connection) => {
+    connection.socket.on('message', (message: string) => {
+      connection.socket.send(`Mensagem recebida: ${message}`);
+    });
+  });
+
+  // Inicialização do servidor
   try {
-    await app.listen({ port: 3333, host: '0.0.0.0' });
-    console.log('🚀 Servidor ChegouDelivery API rodando em http://localhost:3333');
+    const port = Number(process.env.PORT) || 3333;
+    const host = '0.0.0.0'; // Necessário para o Render receber conexões externas
+
+    await app.listen({ port, host });
+    console.log(`Servidor rodando na porta ${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
   }
-};
+}
 
-start();
+main();
