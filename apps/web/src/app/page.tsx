@@ -21,6 +21,9 @@ interface CreatedOrder {
   deliveryAddress: string;
 }
 
+// Define a URL da API priorizando as variáveis de ambiente com fallback para o Render
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chegoudelivery-api.onrender.com';
+
 export default function Home() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<'SNACK' | 'GROCERY' | 'PARCEL'>('SNACK');
@@ -50,7 +53,8 @@ export default function Home() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const res = await fetch('http://localhost:3333/orders', {
+      // CORRIGIDO: Usa a URL da produção
+      const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -79,7 +83,8 @@ export default function Home() {
 
     try {
       setIsProcessingPay(true);
-      const res = await fetch(`http://localhost:3333/orders/${activeOrder.id}/pay`, {
+      // CORRIGIDO: Usa a URL da produção
+      const res = await fetch(`${API_URL}/orders/${activeOrder.id}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentMethod }),
