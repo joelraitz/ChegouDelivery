@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Phone, Mail, Lock, UserCheck, ArrowRight, Loader2 } from 'lucide-react';
 
-// URL dinâmica apontando para o Render com fallback seguro
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://chegoudelivery-api.onrender.com';
 
 export default function LoginPage() {
@@ -16,7 +15,8 @@ export default function LoginPage() {
   // Formulário
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'CUSTOMER' | 'RESTAURANT' | 'DRIVER'>('CUSTOMER');
+  // CORRIGIDO: Tipo alterado de 'CUSTOMER' para 'CLIENT'
+  const [role, setRole] = useState<'CLIENT' | 'RESTAURANT' | 'DRIVER'>('CLIENT');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -43,10 +43,13 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Erro na requisição com o servidor.');
+        // Formata mensagem de erro tratada ou do Zod
+        const formattedError = typeof data.error === 'string' 
+          ? data.error 
+          : data.message || 'Erro de validação nos dados enviados.';
+        throw new Error(formattedError);
       }
 
-      // Salva o token JWT de autenticação
       if (data.token) {
         localStorage.setItem('@chegoudelivery:token', data.token);
       }
@@ -59,7 +62,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('Erro de autenticação:', err);
-      setErrorMessage(err.message || 'Failed to fetch');
+      setErrorMessage(err.message || 'Erro ao comunicar com o servidor.');
     } finally {
       setLoading(false);
     }
@@ -93,44 +96,41 @@ export default function LoginPage() {
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Nome Completo
                 </label>
-                <div className="relative mt-1">
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome"
-                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-3 pr-3 text-xs text-slate-900 outline-none transition-all focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome"
+                  className="mt-1 w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs text-slate-900 outline-none transition-all focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                />
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Telefone / WhatsApp
                 </label>
-                <div className="relative mt-1">
-                  <input
-                    type="text"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="92995302165"
-                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-3 pr-3 text-xs text-slate-900 outline-none transition-all focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="92995302165"
+                  className="mt-1 w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs text-slate-900 outline-none transition-all focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                />
               </div>
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Tipo de Perfil
                 </label>
+                {/* CORRIGIDO: Valor do option ajustado para CLIENT */}
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   className="mt-1 w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs text-slate-900 outline-none transition-all focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
                 >
-                  <option value="CUSTOMER">👤 Cliente</option>
+                  <option value="CLIENT">👤 Cliente</option>
                   <option value="RESTAURANT">🏪 Restaurante</option>
                   <option value="DRIVER">🛵 Entregador</option>
                 </select>
