@@ -1,8 +1,10 @@
 'use client';
 
-import ProtectedRoute from '@/app/components/ProtectedRoute';
-import { Bike, Navigation, CheckCircle, Clock, MapPin, Loader2, RefreshCw } from 'lucide-react';
-import { ProtectedRoute } from '../../components/ProtectedRoute';
+import React, { useCallback, useEffect, useState } from 'react';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { Bike, Navigation, CheckCircle, MapPin, Loader2, RefreshCw } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
 
 interface Order {
   id: string;
@@ -17,10 +19,11 @@ export default function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:3333/orders', { cache: 'no-store' });
+      const res = await fetch(`${API_URL}/orders`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao buscar pedidos');
       const data = await res.json();
       setOrders(data.orders || []);
     } catch (err) {
@@ -28,16 +31,16 @@ export default function DriverDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`http://localhost:3333/orders/${orderId}/status`, {
+      const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -47,7 +50,7 @@ export default function DriverDashboard() {
       });
 
       if (res.ok) {
-        fetchOrders();
+        await fetchOrders();
       }
     } catch (err) {
       console.error(err);
@@ -57,9 +60,8 @@ export default function DriverDashboard() {
   };
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['driver']}>
       <div className="min-h-screen bg-slate-50/50 pb-12">
-        {/* Header do Entregador */}
         <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
@@ -84,7 +86,6 @@ export default function DriverDashboard() {
           </div>
         </header>
 
-        {/* Lista de Corridas */}
         <main className="mx-auto max-w-4xl px-6 pt-8">
           <div className="space-y-4">
             {loading && orders.length === 0 ? (
@@ -123,7 +124,6 @@ export default function DriverDashboard() {
                     <span>{order.deliveryAddress}</span>
                   </div>
 
-                  {/* Ações baseadas no status */}
                   <div className="mt-5 border-t border-slate-100 pt-4 flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500">
                       Status: <strong className="text-slate-900">{order.status}</strong>

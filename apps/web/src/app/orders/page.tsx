@@ -1,8 +1,8 @@
 'use client';
 
-import ProtectedRoute from '@/app/components/ProtectedRoute';
+import React, { useCallback, useEffect, useState } from 'react';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { Clock, ChefHat, Bike, CheckCircle2, MapPin, RefreshCw, Loader2, Package } from 'lucide-react';
-import { ProtectedRoute } from '../../components/ProtectedRoute';
 
 interface Order {
   id: string;
@@ -20,18 +20,21 @@ const STEPS = [
   { status: 'DELIVERED', label: 'Entregue', icon: CheckCircle2 },
 ];
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3333';
+
 export default function ClientOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('@chegoudelivery:token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('@chegoudelivery:token') : null;
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch('http://localhost:3333/orders', { headers, cache: 'no-store' });
+      const res = await fetch(`${API_URL}/orders`, { headers, cache: 'no-store' });
       const data = await res.json();
       setOrders(data.orders || []);
     } catch (err) {
@@ -39,28 +42,30 @@ export default function ClientOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
 
-    // Conexão em tempo real via WebSocket
-    const ws = new WebSocket('ws://localhost:3333/ws/orders');
+    const ws = new WebSocket(`${WS_URL}/ws/orders`);
 
     ws.onmessage = (event) => {
-      const { data: updatedOrder } = JSON.parse(event.data);
-
-      setOrders((prevOrders) => {
-        const exists = prevOrders.some((o) => o.id === updatedOrder.id);
-        if (exists) {
-          return prevOrders.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
-        }
-        return [updatedOrder, ...prevOrders];
-      });
+      try {
+        const { data: updatedOrder } = JSON.parse(event.data);
+        setOrders((prevOrders) => {
+          const exists = prevOrders.some((o) => o.id === updatedOrder.id);
+          if (exists) {
+            return prevOrders.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+          }
+          return [updatedOrder, ...prevOrders];
+        });
+      } catch (err) {
+        console.error('Erro no WebSocket:', err);
+      }
     };
 
     return () => ws.close();
-  }, []);
+  }, [fetchOrders]);
 
   const getStepIndex = (status: Order['status']) => {
     switch (status) {

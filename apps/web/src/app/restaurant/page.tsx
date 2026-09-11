@@ -60,7 +60,6 @@ export default function RestaurantDashboard() {
   return (
     <ProtectedRoute allowedRoles={['restaurant', 'admin']}>
       <div className="min-h-screen bg-slate-50/50 pb-12">
-        {/* Header do Estabelecimento */}
         <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
             <div className="flex items-center gap-3">
@@ -85,7 +84,6 @@ export default function RestaurantDashboard() {
           </div>
         </header>
 
-        {/* Conteúdo Principal */}
         <main className="mx-auto max-w-5xl px-6 pt-8">
           <div className="space-y-4">
             {loading && orders.length === 0 ? (
@@ -126,7 +124,6 @@ export default function RestaurantDashboard() {
                     </div>
                   </div>
 
-                  {/* Ações e Atualização de Status */}
                   <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4">
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                       <span>Status atual:</span>
