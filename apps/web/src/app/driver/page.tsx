@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { Bike, Navigation, CheckCircle, MapPin, Loader2, RefreshCw } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';

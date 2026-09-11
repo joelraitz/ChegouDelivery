@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import ProtectedRoute from '../components/ProtectedRoute';
 import { Utensils, Clock, CheckCircle2, PackageCheck, MapPin, Loader2, RefreshCw, ChefHat } from 'lucide-react';
 
 interface Order {
